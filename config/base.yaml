@@ -1,0 +1,8 @@
+catfact:
+  url: "https://catfact.ninja/fact"
+
+server:
+  addr: "127.0.0.1:4000"
+
+# Pattern for collecting env vars.
+# sample: ${SAMPLE:default-value}
