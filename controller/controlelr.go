@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"sampleApp/gateway/cats"
+	"fx-sample-app/gateway/cats"
 
 	"go.uber.org/zap"
 )

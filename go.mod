@@ -1,4 +1,4 @@
-module sampleApp
+module fx-sample-app
 
 go 1.21
 

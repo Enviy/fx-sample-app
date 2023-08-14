@@ -1,7 +1,7 @@
 package app
 
 import (
-	"sampleApp/gateway/cats"
+	"fx-sample-app/gateway/cats"
 
 	"go.uber.org/fx"
 )

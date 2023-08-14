@@ -1,11 +1,11 @@
 package main
 
 import (
-	"sampleApp/app"
-	"sampleApp/config"
-	"sampleApp/controller"
-	"sampleApp/handler"
-	"sampleApp/infra"
+	"fx-sample-app/app"
+	"fx-sample-app/config"
+	"fx-sample-app/controller"
+	"fx-sample-app/handler"
+	"fx-sample-app/infra"
 
 	"go.uber.org/fx"
 )

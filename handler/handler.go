@@ -2,7 +2,8 @@ package handler
 
 import (
 	"net/http"
-	"sampleApp/controller"
+
+	"fx-sample-app/controller"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
