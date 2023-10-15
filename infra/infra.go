@@ -14,14 +14,18 @@ import (
 var Module = fx.Module(
 	"infra",
 	fx.Provide(
-		NewMuxAndLogger,
+		NewMux,
+		NewLogger,
 	),
 )
 
-func NewMuxAndLogger(lc fx.Lifecycle, cfg config.Provider) (*http.ServeMux, *zap.Logger) {
-	logger, _ := zap.NewProduction()
-	logger.Info("New logger initialized.")
+func NewLogger() *zap.Logger {
+	logCfg := zap.NewProductionConfig()
+	logCfg.EncoderConfig.FunctionKey = "method"
+	logger := zap.Must(logCfg.Build())
+}
 
+func NewMux(lc fx.Lifecycle, cfg config.Provider, log *zap.Logger) *http.ServeMux {
 	mux := &http.ServeMux{}
 	server := &http.Server{
 		Addr:    cfg.Get("server.addr").String(),
@@ -31,7 +35,7 @@ func NewMuxAndLogger(lc fx.Lifecycle, cfg config.Provider) (*http.ServeMux, *zap
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			msg := "Started HTTP server."
-			logger.Info(msg, zap.String("url", server.Addr))
+			logger.Info(msg, zap.String("address", server.Addr))
 			ln, err := net.Listen("tcp", server.Addr)
 			if err != nil {
 				return err
