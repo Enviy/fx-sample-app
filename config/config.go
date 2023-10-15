@@ -25,7 +25,7 @@ var Module = fx.Module(
 // Load default configs.
 func Load() (config.Provider, error) {
 	// Expand used for collecting env vars.
-	var lookup config.LookupFunc = func(string) (string, error) {
+	var lookup config.LookupFunc = func(key string) (string, bool) {
 		return os.LookupEnv(key)
 	}
 	expandOpts := config.Expand(lookup)

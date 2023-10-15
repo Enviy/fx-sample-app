@@ -23,6 +23,8 @@ func NewLogger() *zap.Logger {
 	logCfg := zap.NewProductionConfig()
 	logCfg.EncoderConfig.FunctionKey = "method"
 	logger := zap.Must(logCfg.Build())
+
+	return logger
 }
 
 func NewMux(lc fx.Lifecycle, cfg config.Provider, log *zap.Logger) *http.ServeMux {
@@ -35,7 +37,7 @@ func NewMux(lc fx.Lifecycle, cfg config.Provider, log *zap.Logger) *http.ServeMu
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			msg := "Started HTTP server."
-			logger.Info(msg, zap.String("address", server.Addr))
+			log.Info(msg, zap.String("address", server.Addr))
 			ln, err := net.Listen("tcp", server.Addr)
 			if err != nil {
 				return err
@@ -45,10 +47,10 @@ func NewMux(lc fx.Lifecycle, cfg config.Provider, log *zap.Logger) *http.ServeMu
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping HTTP server.")
+			log.Info("Stopping HTTP server.")
 			return server.Shutdown(ctx)
 		},
 	})
 
-	return mux, logger
+	return mux
 }
