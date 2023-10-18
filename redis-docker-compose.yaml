@@ -1,0 +1,22 @@
+version: '3.8'
+
+networks:
+  redis-network:
+    driver: bridge
+
+services:
+  redis:
+    image: redis:latest
+    restart: always
+    networks:
+      - redis-network
+    ports:
+      - '6379:6379'
+    command: redis-server
+    volumes:
+      - redis:/var/lib/redis
+      - redis-config:/usr/local/etc/redis/redis.conf
+
+volumes:
+  redis:
+  redis-config:

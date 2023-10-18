@@ -1,7 +1,7 @@
 package app
 
 import (
-	"fx-sample-app/gateway/cats"
+	"fx-sample-app/gateway/redis"
 
 	"go.uber.org/fx"
 )
@@ -9,6 +9,6 @@ import (
 var Module = fx.Module(
 	"app gateways",
 	fx.Option(
-		fx.Provide(cats.New),
+		fx.Provide(redis.New),
 	),
 )
