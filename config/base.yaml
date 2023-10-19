@@ -6,3 +6,7 @@ server:
 
 # Pattern for collecting env vars.
 # sample: ${SAMPLE:default-value}
+
+cache:
+  interval: 20
+  duration: second

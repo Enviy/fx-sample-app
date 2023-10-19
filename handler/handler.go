@@ -11,27 +11,26 @@ import (
 
 // Handlers .
 type Handlers struct {
-	logger *zap.Logger
-	mux    *http.ServeMux
-	ctlr   controller.Interface
-	// Controller interface.
+	log *zap.Logger
+	mux *http.ServeMux
+	con controller.Controller
 }
 
 // Params .
 type Params struct {
 	fx.In
 
-	Logger *zap.Logger
-	Mux    *http.ServeMux
-	Ctlr   controller.Interface
+	Log *zap.Logger
+	Mux *http.ServeMux
+	Con controller.Controller
 }
 
 // New .
 func New(p Params) *Handlers {
 	h := &Handlers{
-		logger: p.Logger,
-		mux:    p.Mux,
-		ctlr:   p.Ctlr,
+		log: p.Log,
+		mux: p.Mux,
+		con: p.Con,
 	}
 	h.RegisterHandlers()
 	return h
@@ -52,7 +51,7 @@ func (h *Handlers) Hello(w http.ResponseWriter, r *http.Request) {
 
 // CatFact .
 func (h *Handlers) CatFact(w http.ResponseWriter, r *http.Request) {
-	fact, err := h.ctlr.CatFact()
+	fact, err := h.con.CatFact()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

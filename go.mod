@@ -3,12 +3,15 @@ module fx-sample-app
 go 1.21
 
 require (
+	github.com/redis/go-redis/v9 v9.2.1
 	go.uber.org/config v1.4.0
 	go.uber.org/fx v1.20.0
 	go.uber.org/zap v1.25.0
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	go.uber.org/dig v1.17.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/lint v0.0.0-20190930215403-16217165b5de // indirect

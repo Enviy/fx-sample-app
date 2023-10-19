@@ -9,7 +9,7 @@ import (
 // Gateway defines redis interaction methods.
 type Gateway interface {
 	Set(ctx context.Context, key, value string) error
-	Get(ctx cotext.Context, key string) (string, error)
+	Get(ctx context.Context, key string) (string, error)
 }
 
 type gateway struct {
@@ -23,15 +23,17 @@ func New() Gateway {
 		Password: "", // no password set.
 		DB:       0,  // uses default db.
 	})
-	return &gateway{}
+	return &gateway{
+		client: client,
+	}
 }
 
 // Set stores a key value pair in a cache.
-func Set(ctx context.Context, key, value string) error {
-	return g.client.Set(ctx, key, value)
+func (g *gateway) Set(ctx context.Context, key, value string) error {
+	return g.client.Set(ctx, key, value, 0).Err()
 }
 
 // Get collects value by key from cache.
-func Get(ctx context.Context, key string) (string, error) {
+func (g *gateway) Get(ctx context.Context, key string) (string, error) {
 	return g.client.Get(ctx, key).Result()
 }
