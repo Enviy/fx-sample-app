@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"fx-sample-app/gateway/cats"
-	"fx-sample-app/repository/cache"
+	"fx-sample-app/gateway/redis"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -14,13 +14,13 @@ import (
 
 // Controller .
 type Controller interface {
-	CatFact() (string, error)
+	CatFact(ctx context.Context) (string, error)
 }
 
 type con struct {
 	cat   *cats.Gateway
 	log   *zap.Logger
-	cache *cache.Cache
+	cache redis.Gateway
 	keys  []string
 }
 
@@ -28,7 +28,7 @@ type Params struct {
 	fx.In
 
 	Cat   *cats.Gateway
-	Cache *cache.Cache
+	Cache redis.Gateway
 	Log   *zap.Logger
 	Lc    fx.Lifecycle
 }
@@ -57,7 +57,7 @@ func New(p Params) Controller {
 }
 
 // CatWorkflow .
-func (c *con) CatFact() (string, error) {
+func (c *con) CatFact(ctx context.Context) (string, error) {
 	fact, err := c.cat.GetFact()
 	if err != nil {
 		return "", err
@@ -67,13 +67,13 @@ func (c *con) CatFact() (string, error) {
 
 	key := fmt.Sprintf("cat:%v", time.Now())
 	c.keys = append(c.keys, key)
-	c.cache.Set(key, fact, 5*time.Second)
+	c.cache.Set(ctx, key, fact, 1*time.Minute)
 
 	return fact, nil
 }
 
 func (c *con) listener(exitCh chan bool) {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -82,12 +82,21 @@ func (c *con) listener(exitCh chan bool) {
 			c.log.Info("closing goroutine")
 			return
 		case t := <-ticker.C:
-			c.log.Info("ticker:", zap.Any("time", t))
+			ctx := context.Background()
+			c.log.Info("ticker reached", zap.Any("time", t))
+
+			// Instead of HScan, just ranging over slice for now.
 			for _, key := range c.keys {
-				value, exists := c.cache.Get(key)
+				value, err := c.cache.Get(ctx, key)
+				if err != nil {
+					if err.Error() == "redis: nil" {
+						continue
+					}
+					// could emit err to channel here.
+					c.log.Error("cache Get", zap.Error(err))
+				}
 				c.log.Info("cat record from cache",
 					zap.Any("fact", value),
-					zap.Bool("exists", exists),
 				)
 			}
 		}

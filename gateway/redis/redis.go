@@ -2,13 +2,14 @@ package redis
 
 import (
 	"context"
+	"time"
 
 	redis "github.com/redis/go-redis/v9"
 )
 
 // Gateway defines redis interaction methods.
 type Gateway interface {
-	Set(ctx context.Context, key, value string) error
+	Set(ctx context.Context, key, value string, exp time.Duration) error
 	Get(ctx context.Context, key string) (string, error)
 }
 
@@ -29,8 +30,8 @@ func New() Gateway {
 }
 
 // Set stores a key value pair in a cache.
-func (g *gateway) Set(ctx context.Context, key, value string) error {
-	return g.client.Set(ctx, key, value, 0).Err()
+func (g *gateway) Set(ctx context.Context, key, value string, exp time.Duration) error {
+	return g.client.Set(ctx, key, value, exp).Err()
 }
 
 // Get collects value by key from cache.

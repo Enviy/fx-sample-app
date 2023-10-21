@@ -8,5 +8,5 @@ server:
 # sample: ${SAMPLE:default-value}
 
 cache:
-  interval: 20
+  interval: 30
   duration: second

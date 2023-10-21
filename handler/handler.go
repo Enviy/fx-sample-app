@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"fx-sample-app/controller"
@@ -51,7 +52,8 @@ func (h *Handlers) Hello(w http.ResponseWriter, r *http.Request) {
 
 // CatFact .
 func (h *Handlers) CatFact(w http.ResponseWriter, r *http.Request) {
-	fact, err := h.con.CatFact()
+	ctx := context.Background()
+	fact, err := h.con.CatFact(ctx)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
