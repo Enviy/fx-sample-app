@@ -7,6 +7,7 @@ import (
 
 	"fx-sample-app/gateway/cats"
 	"fx-sample-app/gateway/redis"
+	"fx-sample-app/gateway/slack"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -21,6 +22,7 @@ type con struct {
 	cat   *cats.Gateway
 	log   *zap.Logger
 	cache redis.Gateway
+	slack slack.Gateway
 	keys  []string
 }
 
@@ -29,6 +31,7 @@ type Params struct {
 
 	Cat   *cats.Gateway
 	Cache redis.Gateway
+	Slack slack.Gateway
 	Log   *zap.Logger
 	Lc    fx.Lifecycle
 }
@@ -39,6 +42,7 @@ func New(p Params) Controller {
 		cat:   p.Cat,
 		log:   p.Log,
 		cache: p.Cache,
+		slack: p.Slack,
 	}
 
 	exitCh := make(chan bool, 1)

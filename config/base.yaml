@@ -1,12 +1,18 @@
+# Pattern for collecting env vars.
+# sample with default: ${SAMPLE:default-value}
+# sample err if unavailable: $SAMPLE
+
 catfact:
   url: "https://catfact.ninja/fact"
 
 server:
-  addr: "127.0.0.1:4000"
-
-# Pattern for collecting env vars.
-# sample: ${SAMPLE:default-value}
+  addr: ${SERVE_ADDR:127.0.0.1}
+  port: "4000"
 
 cache:
   interval: 30
   duration: second
+
+slack:
+  token: $SLACK_OAUTH_TOKEN
+  signing_key: $SLACK_SIGNING_KEY
