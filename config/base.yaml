@@ -16,3 +16,8 @@ cache:
 slack:
   token: $SLACK_OAUTH_TOKEN
   signing_key: $SLACK_SIGNING_KEY
+
+redis:
+  address: "127.0.0.1:6379"
+
+dev: true

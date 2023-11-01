@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	redis "github.com/redis/go-redis/v9"
+	"go.uber.org/config"
 )
 
 // Gateway defines redis interaction methods.
@@ -18,12 +20,24 @@ type gateway struct {
 }
 
 // New is the redis gateway constructor.
-func New() Gateway {
-	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+func New(cfg config.Provider, acfg aws.Config) Gateway {
+	credCache := aws.NewCredentialsCache(acfg.Credentials)
+	opts := &redis.Options{
+		Addr:     cfg.Get("redis.address").String(),
 		Password: "", // no password set.
 		DB:       0,  // uses default db.
-	})
+	}
+	// If dev field is not empty, we're deployed, add provider.
+	if cfg.Get("dev").String() != "" {
+		opts.CredentialsProvider = func() (string, string) {
+			creds, err := credCache.Retrieve(ctx)
+			if err != nil {
+				return "", ""
+			}
+			return "", creds.SessionToken
+		}
+	}
+	client := redisNewClient(opts)
 	return &gateway{
 		client: client,
 	}
