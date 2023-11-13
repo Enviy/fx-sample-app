@@ -30,6 +30,7 @@ func New(cfg config.Provider, acfg aws.Config) Gateway {
 	// If dev field is not empty, we're deployed, add provider.
 	if cfg.Get("dev").String() != "" {
 		opts.CredentialsProvider = func() (string, string) {
+			ctx := context.Background()
 			creds, err := credCache.Retrieve(ctx)
 			if err != nil {
 				return "", ""
@@ -37,9 +38,9 @@ func New(cfg config.Provider, acfg aws.Config) Gateway {
 			return "", creds.SessionToken
 		}
 	}
-	client := redisNewClient(opts)
+
 	return &gateway{
-		client: client,
+		client: redis.NewClient(opts),
 	}
 }
 

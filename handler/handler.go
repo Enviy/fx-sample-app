@@ -48,9 +48,17 @@ func New(p Params) *Handlers {
 
 // RegisterHandlers .
 func (h *Handlers) RegisterHandlers() {
+	h.mux.HandleFunc("/ping", h.healthCheck)
 	h.mux.HandleFunc("/hello", h.hello)
 	h.mux.HandleFunc("/cat_fact", h.catFact)
 	h.mux.HandleFunc("/cat_service", h.catsAAS)
+}
+
+// HealthCheck validate routing.
+func (h *Handlers) healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+	return
 }
 
 // Hello .

@@ -2,6 +2,9 @@
 # sample with default: ${SAMPLE:default-value}
 # sample err if unavailable: $SAMPLE
 
+aws:
+  region: ${AWS_REGION:us-west-2}
+
 catfact:
   url: "https://catfact.ninja/fact"
 
@@ -14,8 +17,8 @@ cache:
   duration: second
 
 slack:
-  token: $SLACK_OAUTH_TOKEN
-  signing_key: $SLACK_SIGNING_KEY
+  token: ${SLACK_OAUTH_TOKEN:placeholder}
+  signing_key: ${SLACK_SIGNING_KEY:placeholder}
 
 redis:
   address: "127.0.0.1:6379"
