@@ -1,0 +1,68 @@
+syntax = "proto3";
+package sample;
+option go_package = "github.com/Enviy/fx-sample-app";
+import "google/api/annotations.proto";
+
+option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+ info: {
+  title: "SampleFxApp";
+  version: "1.0";
+  contact: {
+   name: "grpc-with-rest";
+   url: "https://github.com/Enviy/fx-sample-app";
+    };
+  };
+  schemes: HTTP;
+  consumes: "application/json";
+  produces: "application/json";
+  responses: {
+  key: "404";
+  value: {
+   description: "Returned when the resource does not exist.";
+   schema: {
+    json_schema: {
+     type: STRING;
+    }
+   }
+  }
+ }
+};
+
+message HealthCheckRequest {}
+message HealthCheckResponse {
+  string message 1;
+}
+
+message HelloRequest {
+  string name = 1;
+}
+message HelloResponse {
+  string message = 1;
+}
+
+message CatFactRequest {}
+message CatFactResponse {
+  string fact = 1;
+}
+
+// Define service method contract.
+service HelloService {
+  rpc SayHello(HelloRequest) returns (HelloResponse) {
+    option(google.api.http) = {
+      get: "/api/hello/{name}",
+    };
+  }
+
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {
+    option(google.api.http) = {
+      get: "/api/ping",
+    };
+  }
+
+  rpc CatFact(CatFactRequest) returns (CatFactResponse) {
+    option(google.api.http) = {
+      get: "/api/cat_fact",
+    };
+  }
+}
+
