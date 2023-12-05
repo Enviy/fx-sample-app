@@ -7,22 +7,28 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"fx-sample-app/controller"
+	pb "fx-sample-app/proto"
 
 	"github.com/slack-go/slack"
+	"go.uber.org/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // Handlers .
 type Handlers struct {
+	pb.UnimplementedSampleServer
+
 	log *zap.Logger
-	mux *http.ServeMux
 	con controller.Controller
 }
 
@@ -31,34 +37,51 @@ type Params struct {
 	fx.In
 
 	Log *zap.Logger
-	Mux *http.ServeMux
+	Lc  *fx.Lifecycle
+	Cfg config.Provider
 	Con controller.Controller
 }
 
 // New .
-func New(p Params) *Handlers {
+func New(p Params) (*Handlers, error) {
 	h := &Handlers{
 		log: p.Log,
 		mux: p.Mux,
 		con: p.Con,
 	}
-	h.RegisterHandlers()
-	return h
-}
+	ln, err := net.Listen(
+		"tcp",
+		p.Cfg.Get("server.address").String(),
+	)
+	if err != nil {
+		return nil, err
+	}
 
-// RegisterHandlers .
-func (h *Handlers) RegisterHandlers() {
-	h.mux.HandleFunc("/ping", h.healthCheck)
-	h.mux.HandleFunc("/hello", h.hello)
-	h.mux.HandleFunc("/cat_fact", h.catFact)
-	h.mux.HandleFunc("/cat_service", h.catsAAS)
-}
+	grpcServer := grpc.NewServer()
+	reflection.Register(grpcServer)
+	pb.RegisterSampleServer(grpcServer, h)
 
-// HealthCheck validate routing.
-func (h *Handlers) healthCheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
-	return
+	p.Lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			h.log.Info("Serving gRPC",
+				zap.String("address", p.Cfg.Get("server.address").String()),
+			)
+			go func() {
+				err := grpcServer.Serve(ln)
+				if err != nil {
+					h.log.Error("grpc failed to serve",
+						zap.Error(err),
+					)
+					return
+				}
+			}()
+		},
+		OnStop: func(ctx context.Context) error {
+			h.log.Info("shutting down")
+		},
+	})
+
+	return h, nil
 }
 
 // Hello .

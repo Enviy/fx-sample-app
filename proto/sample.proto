@@ -1,6 +1,6 @@
 syntax = "proto3";
 package sample;
-option go_package = "github.com/Enviy/fx-sample-app";
+option go_package = "proto";
 import "google/api/annotations.proto";
 
 option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
@@ -28,11 +28,6 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
  }
 };
 
-message HealthCheckRequest {}
-message HealthCheckResponse {
-  string message 1;
-}
-
 message HelloRequest {
   string name = 1;
 }
@@ -49,19 +44,13 @@ message CatFactResponse {
 service HelloService {
   rpc SayHello(HelloRequest) returns (HelloResponse) {
     option(google.api.http) = {
-      get: "/api/hello/{name}",
-    };
-  }
-
-  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {
-    option(google.api.http) = {
-      get: "/api/ping",
+      post: "/api/hello/{name}",
     };
   }
 
   rpc CatFact(CatFactRequest) returns (CatFactResponse) {
     option(google.api.http) = {
-      get: "/api/cat_fact",
+      post: "/api/cat_fact",
     };
   }
 }
