@@ -3,3 +3,6 @@
 cprof
 http.test
 
+# ignore generated proto files.
+proto/**/*.go
+

@@ -1,18 +1,21 @@
 syntax = "proto3";
-package sample;
-option go_package = "proto";
+package fxsample;
+option go_package = "proto/fxsample";
 import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+//import "grpc-gateway/protoc-gen-openapiv2/options/openapiv2.proto";
 
-option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
  info: {
   title: "SampleFxApp";
   version: "1.0";
+  description: "fx sample app openapi definition";
   contact: {
    name: "grpc-with-rest";
    url: "https://github.com/Enviy/fx-sample-app";
     };
   };
-  schemes: HTTP;
+  schemes: HTTPS;
   consumes: "application/json";
   produces: "application/json";
   responses: {
@@ -32,7 +35,7 @@ message HelloRequest {
   string name = 1;
 }
 message HelloResponse {
-  string message = 1;
+  string greeting = 1;
 }
 
 message CatFactRequest {}
@@ -44,13 +47,14 @@ message CatFactResponse {
 service HelloService {
   rpc SayHello(HelloRequest) returns (HelloResponse) {
     option(google.api.http) = {
-      post: "/api/hello/{name}",
+      post: "/api/v1/hello/{name}",
+      body: "message",
     };
   }
 
   rpc CatFact(CatFactRequest) returns (CatFactResponse) {
     option(google.api.http) = {
-      post: "/api/cat_fact",
+      get: "/api/v1/cat_fact",
     };
   }
 }

@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// Handlers .
+// Handlers implements grpc service.
 type Handlers struct {
 	pb.UnimplementedSampleServer
 
@@ -32,7 +32,7 @@ type Handlers struct {
 	con controller.Controller
 }
 
-// Params .
+// Params defines constructor requirements.
 type Params struct {
 	fx.In
 
@@ -42,7 +42,7 @@ type Params struct {
 	Con controller.Controller
 }
 
-// New .
+// New is the handler constructor.
 func New(p Params) (*Handlers, error) {
 	h := &Handlers{
 		log: p.Log,
@@ -57,6 +57,7 @@ func New(p Params) (*Handlers, error) {
 		return nil, err
 	}
 
+	// Create grpc server, register service.
 	grpcServer := grpc.NewServer()
 	reflection.Register(grpcServer)
 	pb.RegisterSampleServer(grpcServer, h)
@@ -85,25 +86,22 @@ func New(p Params) (*Handlers, error) {
 }
 
 // Hello .
-func (h *Handlers) hello(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("hello"))
-	return
+func (h *Handlers) Hello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
+	return &pb.HelloResponse{
+		Greeting: "Hello " + req.Name,
+	}, nil
 }
 
-// CatFact .
-func (h *Handlers) catFact(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+// CatFact returns a random cat fact.
+func (h *Handlers) CatFact(ctx context.Context, req *pb.CatFactRequest) (*pb.CatFactResponse, error) {
 	fact, err := h.con.CatFact(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return &pb.CatFactResponse{}, err
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fact))
-	return
+	return &pb.CatFactResponse{
+		Fact: fact,
+	}, nil
 }
 
 func (h *Handlers) catsAAS(w http.ResponseWriter, r *http.Request) {
