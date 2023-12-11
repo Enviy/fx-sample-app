@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"fx-sample-app/controller"
-	pb "fx-sample-app/proto"
+	pb "fx-sample-app/proto/fxsample"
 
 	"github.com/slack-go/slack"
 	"go.uber.org/config"

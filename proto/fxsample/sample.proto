@@ -48,7 +48,7 @@ service HelloService {
   rpc SayHello(HelloRequest) returns (HelloResponse) {
     option(google.api.http) = {
       post: "/api/v1/hello/{name}",
-      body: "message",
+      body: "name",
     };
   }
 
