@@ -16,9 +16,9 @@ const (
 	configDir = "./config"
 	baseFile  = "/base.yaml"
 	// devFile = "/dev.yaml"
-	// secretsFile = "/secrets.yaml"
 )
 
+// Module supports fx DI registration.
 var Module = fx.Module(
 	"config",
 	fx.Provide(
@@ -26,29 +26,35 @@ var Module = fx.Module(
 	),
 )
 
-// Load default configs.
+// Load service configs and default aws configs.
 func Load() (config.Provider, aws.Config, error) {
 	var acfg aws.Config
-	// Expand used for collecting env vars.
+	// Define config key:value env var expansion.
 	var lookup config.LookupFunc = func(key string) (string, bool) {
 		return os.LookupEnv(key)
 	}
 	expandOpts := config.Expand(lookup)
+
+	// Collect full path to be used with config file names.
 	cwd, err := filepath.Abs(configDir)
 	if err != nil {
 		return nil, acfg, fmt.Errorf("filepath abs %w", err)
 	}
 
+	// Currently only using the base config file.
+	// Construct config provider options.
 	fileOpts := config.File(cwd + baseFile)
 	var ymlOpts []config.YAMLOption
 	ymlOpts = append(ymlOpts, fileOpts)
 	ymlOpts = append(ymlOpts, expandOpts)
 
+	// Collect config provider; consumes config files.
 	cfg, err := config.NewYAML(ymlOpts...)
 	if err != nil {
 		return nil, acfg, fmt.Errorf("config newyaml %w", err)
 	}
 
+	// Collect aws default config.
 	acfg, err = awsConfig.LoadDefaultConfig(
 		context.Background(),
 		awsConfig.WithRegion(cfg.Get("aws.region").String()),

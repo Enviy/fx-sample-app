@@ -9,8 +9,7 @@ catfact:
   url: "https://catfact.ninja/fact"
 
 server:
-  addr: ${SERVE_ADDR:127.0.0.1}
-  port: "4000"
+  address: ${SERVE_ADDR:127.0.0.1:5000}
 
 cache:
   interval: 30

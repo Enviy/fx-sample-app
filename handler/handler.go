@@ -7,80 +7,156 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"fx-sample-app/controller"
+	pb "fx-sample-app/proto/fxsample"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/slack-go/slack"
+	"go.uber.org/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 )
 
-// Handlers .
+// Handlers implements grpc service.
 type Handlers struct {
-	log *zap.Logger
-	mux *http.ServeMux
-	con controller.Controller
+	pb.UnimplementedFxsampleServer
+
+	log    *zap.Logger
+	con    controller.Controller
+	health *health.Server
 }
 
-// Params .
+// Params defines constructor requirements.
 type Params struct {
 	fx.In
 
 	Log *zap.Logger
-	Mux *http.ServeMux
+	Lc  fx.Lifecycle
+	Cfg config.Provider
 	Con controller.Controller
 }
 
-// New .
-func New(p Params) *Handlers {
+// New is the handler constructor.
+func New(p Params) (*Handlers, error) {
 	h := &Handlers{
 		log: p.Log,
-		mux: p.Mux,
 		con: p.Con,
 	}
-	h.RegisterHandlers()
-	return h
-}
+	ln, err := net.Listen(
+		"tcp",
+		p.Cfg.Get("server.address").String(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("grpc net listen %w", err)
+	}
 
-// RegisterHandlers .
-func (h *Handlers) RegisterHandlers() {
-	h.mux.HandleFunc("/ping", h.healthCheck)
-	h.mux.HandleFunc("/hello", h.hello)
-	h.mux.HandleFunc("/cat_fact", h.catFact)
-	h.mux.HandleFunc("/cat_service", h.catsAAS)
-}
+	// Create grpc server.
+	grpcServer := grpc.NewServer()
 
-// HealthCheck validate routing.
-func (h *Handlers) healthCheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
-	return
+	// Add reflection to service stack.
+	reflection.Register(grpcServer)
+
+	// Add healthcheck to service stack.
+	healthCheck := health.NewServer()
+	healthpb.RegisterHealthServer(grpcServer, healthCheck)
+	h.health = healthCheck
+
+	// Add sample proto service to service stack.
+	pb.RegisterFxsampleServer(grpcServer, h)
+
+	// gRPC client connection for HTTP proxy.
+	conn, err := grpc.DialContext(
+		context.Background(),
+		p.Cfg.Get("server.address").String(),
+		//grpc.WithBlock(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("grpc dial context %w", err)
+	}
+
+	// Create proxy.
+	gwmux := runtime.NewServeMux()
+	// Register proxy handlers. Routes http calls to gRPC.
+	err = pb.RegisterFxsampleHandler(
+		context.Background(),
+		gwmux,
+		conn,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("register proxy handler %w", err)
+	}
+
+	gwServer := &http.Server{
+		Addr:    "127.0.0.1:8090",
+		Handler: gwmux,
+	}
+
+	p.Lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			// Start gRPC server.
+			h.log.Info("Serving gRPC",
+				zap.String("address", p.Cfg.Get("server.address").String()),
+			)
+			go func() {
+				if err := grpcServer.Serve(ln); err != nil {
+					h.log.Error("grpc serve", zap.Error(err))
+					return
+				}
+			}()
+
+			// Start proxy server.
+			h.log.Info("Starting http proxy", zap.String("address", "127.0.0.1:8090"))
+			go func() {
+				if err := gwServer.ListenAndServe(); err != nil {
+					h.log.Error("proxy listen&serve", zap.Error(err))
+					return
+				}
+			}()
+
+			// Set initial health status.
+			h.health.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			h.log.Info("shutting down")
+			grpcServer.GracefulStop()
+			gwServer.Shutdown(ctx)
+			return nil
+		},
+	})
+
+	return h, nil
 }
 
 // Hello .
-func (h *Handlers) hello(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("hello"))
-	return
+func (h *Handlers) Hello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
+	return &pb.HelloResponse{
+		Greeting: "Hello " + req.Name,
+	}, nil
 }
 
-// CatFact .
-func (h *Handlers) catFact(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+// CatFact returns a random cat fact.
+func (h *Handlers) CatFact(ctx context.Context, req *pb.CatFactRequest) (*pb.CatFactResponse, error) {
 	fact, err := h.con.CatFact(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return &pb.CatFactResponse{}, err
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fact))
-	return
+	return &pb.CatFactResponse{
+		Fact: fact,
+	}, nil
 }
 
 func (h *Handlers) catsAAS(w http.ResponseWriter, r *http.Request) {
