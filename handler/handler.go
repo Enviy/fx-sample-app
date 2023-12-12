@@ -66,9 +66,9 @@ func New(p Params) (*Handlers, error) {
 
 	// Add reflection to service stack.
 	reflection.Register(grpcServer)
-	healthCheck := health.NewServer()
 
 	// Add healthcheck to service stack.
+	healthCheck := health.NewServer()
 	healthpb.RegisterHealthServer(grpcServer, healthCheck)
 	h.health = healthCheck
 
@@ -79,7 +79,7 @@ func New(p Params) (*Handlers, error) {
 	conn, err := grpc.DialContext(
 		context.Background(),
 		p.Cfg.Get("server.address").String(),
-		grpc.WithBlock(),
+		//grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -99,7 +99,7 @@ func New(p Params) (*Handlers, error) {
 	}
 
 	gwServer := &http.Server{
-		Addr:    ":8090",
+		Addr:    "127.0.0.1:8090",
 		Handler: gwmux,
 	}
 
@@ -117,7 +117,7 @@ func New(p Params) (*Handlers, error) {
 			}()
 
 			// Start proxy server.
-			h.log.Info("Starting http proxy", zap.String("address", "0.0.0.0:8090"))
+			h.log.Info("Starting http proxy", zap.String("address", "127.0.0.1:8090"))
 			go func() {
 				if err := gwServer.ListenAndServe(); err != nil {
 					h.log.Error("proxy listen&serve", zap.Error(err))
@@ -125,6 +125,8 @@ func New(p Params) (*Handlers, error) {
 				}
 			}()
 
+			// Set initial health status.
+			h.health.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
