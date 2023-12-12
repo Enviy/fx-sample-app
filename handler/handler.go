@@ -16,20 +16,25 @@ import (
 	"fx-sample-app/controller"
 	pb "fx-sample-app/proto/fxsample"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/slack-go/slack"
 	"go.uber.org/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
 
 // Handlers implements grpc service.
 type Handlers struct {
-	pb.UnimplementedSampleServer
+	pb.UnimplementedFxsampleServer
 
-	log *zap.Logger
-	con controller.Controller
+	log    *zap.Logger
+	con    controller.Controller
+	health *health.Server
 }
 
 // Params defines constructor requirements.
@@ -37,7 +42,7 @@ type Params struct {
 	fx.In
 
 	Log *zap.Logger
-	Lc  *fx.Lifecycle
+	Lc  fx.Lifecycle
 	Cfg config.Provider
 	Con controller.Controller
 }
@@ -46,7 +51,6 @@ type Params struct {
 func New(p Params) (*Handlers, error) {
 	h := &Handlers{
 		log: p.Log,
-		mux: p.Mux,
 		con: p.Con,
 	}
 	ln, err := net.Listen(
@@ -54,31 +58,80 @@ func New(p Params) (*Handlers, error) {
 		p.Cfg.Get("server.address").String(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("grpc net listen %w", err)
 	}
 
-	// Create grpc server, register service.
+	// Create grpc server.
 	grpcServer := grpc.NewServer()
+
+	// Add reflection to service stack.
 	reflection.Register(grpcServer)
-	pb.RegisterSampleServer(grpcServer, h)
+	healthCheck := health.NewServer()
+
+	// Add healthcheck to service stack.
+	healthpb.RegisterHealthServer(grpcServer, healthCheck)
+	h.health = healthCheck
+
+	// Add sample proto service to service stack.
+	pb.RegisterFxsampleServer(grpcServer, h)
+
+	// gRPC client connection for HTTP proxy.
+	conn, err := grpc.DialContext(
+		context.Background(),
+		p.Cfg.Get("server.address").String(),
+		grpc.WithBlock(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("grpc dial context %w", err)
+	}
+
+	// Create proxy.
+	gwmux := runtime.NewServeMux()
+	// Register proxy handlers. Routes http calls to gRPC.
+	err = pb.RegisterFxsampleHandler(
+		context.Background(),
+		gwmux,
+		conn,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("register proxy handler %w", err)
+	}
+
+	gwServer := &http.Server{
+		Addr:    ":8090",
+		Handler: gwmux,
+	}
 
 	p.Lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
+			// Start gRPC server.
 			h.log.Info("Serving gRPC",
 				zap.String("address", p.Cfg.Get("server.address").String()),
 			)
 			go func() {
-				err := grpcServer.Serve(ln)
-				if err != nil {
-					h.log.Error("grpc failed to serve",
-						zap.Error(err),
-					)
+				if err := grpcServer.Serve(ln); err != nil {
+					h.log.Error("grpc serve", zap.Error(err))
 					return
 				}
 			}()
+
+			// Start proxy server.
+			h.log.Info("Starting http proxy", zap.String("address", "0.0.0.0:8090"))
+			go func() {
+				if err := gwServer.ListenAndServe(); err != nil {
+					h.log.Error("proxy listen&serve", zap.Error(err))
+					return
+				}
+			}()
+
+			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			h.log.Info("shutting down")
+			grpcServer.GracefulStop()
+			gwServer.Shutdown(ctx)
+			return nil
 		},
 	})
 

@@ -1,13 +1,12 @@
 syntax = "proto3";
 package fxsample;
-option go_package = "proto/fxsample";
+option go_package = "fx-sample-app/proto/fxsample";
 import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
-//import "grpc-gateway/protoc-gen-openapiv2/options/openapiv2.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
  info: {
-  title: "SampleFxApp";
+  title: "FxSampleApp";
   version: "1.0";
   description: "fx sample app openapi definition";
   contact: {
@@ -44,8 +43,8 @@ message CatFactResponse {
 }
 
 // Define service method contract.
-service HelloService {
-  rpc SayHello(HelloRequest) returns (HelloResponse) {
+service fxsample {
+  rpc Hello(HelloRequest) returns (HelloResponse) {
     option(google.api.http) = {
       post: "/api/v1/hello/{name}",
       body: "name",
