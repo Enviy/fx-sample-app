@@ -1,6 +1,8 @@
 syntax = "proto3";
 package fxsample;
 option go_package = "fx-sample-app/proto/fxsample";
+
+import "google/api/httpbody.proto";
 import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
@@ -32,6 +34,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 
 message HelloRequest {
   string name = 1;
+  google.api.HttpBody body_bytes = 2;
 }
 message HelloResponse {
   string greeting = 1;
@@ -47,7 +50,7 @@ service fxsample {
   rpc Hello(HelloRequest) returns (HelloResponse) {
     option(google.api.http) = {
       post: "/api/v1/hello/{name}",
-      body: "name",
+      body: "body_bytes",
     };
   }
 

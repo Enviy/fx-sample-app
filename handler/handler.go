@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"fx-sample-app/controller"
@@ -22,10 +23,13 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 // Handlers implements grpc service.
@@ -86,8 +90,23 @@ func New(p Params) (*Handlers, error) {
 		return nil, fmt.Errorf("grpc dial context %w", err)
 	}
 
-	// Create proxy.
-	gwmux := runtime.NewServeMux()
+	// Define header forwarders.
+	timeHeader := runtime.WithIncomingHeaderMatcher(func(key string) (string, bool) {
+		if strings.EqualFold(key, "X-Slack-Request-Timestamp") {
+			return key, true
+		}
+		return "", false
+	})
+	signHeader := runtime.WithIncomingHeaderMatcher(func(key string) (string, bool) {
+		if strings.EqualFold(key, "X-Slack-Signature") {
+			return key, true
+		}
+		return "", false
+	})
+
+	// Create proxy mux.
+	gwmux := runtime.NewServeMux(timeHeader, signHeader)
+
 	// Register proxy handlers. Routes http calls to gRPC.
 	err = pb.RegisterFxsampleHandler(
 		context.Background(),
@@ -142,6 +161,21 @@ func New(p Params) (*Handlers, error) {
 
 // Hello .
 func (h *Handlers) Hello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "CatFact: missing incoming metadata in rpc context")
+	}
+
+	if v, ok := md["X-Slack-Request-Timestamp"]; ok {
+		h.log.Info("timestamp header", zap.String("timestamp", v))
+	}
+	if v, ok := md["X-Slack-Signature"]; ok {
+		h.log.Info("signature header", zap.String("signature", v))
+	}
+
+	body := req.GetBodyBytes().GetData()
+	h.log.Info("body bytes", zap.String("body", string(body)))
+
 	return &pb.HelloResponse{
 		Greeting: "Hello " + req.Name,
 	}, nil
