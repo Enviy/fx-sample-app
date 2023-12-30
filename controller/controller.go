@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"fx-sample-app/gateway/cats"
-	"fx-sample-app/gateway/redis"
-	"fx-sample-app/gateway/slack"
-
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+
+	"fx-sample-app/gateway/cats"
+	"fx-sample-app/gateway/postgres"
+	"fx-sample-app/gateway/redis"
+	"fx-sample-app/gateway/slack"
 )
 
 // Controller .
@@ -23,6 +24,7 @@ type con struct {
 	log   *zap.Logger
 	cache redis.Gateway
 	slack slack.Gateway
+	db    postgres.Gateway
 	keys  []string
 }
 
@@ -32,6 +34,7 @@ type Params struct {
 	Cat   *cats.Gateway
 	Cache redis.Gateway
 	Slack slack.Gateway
+	DB    postgres.Gateway
 	Log   *zap.Logger
 	Lc    fx.Lifecycle
 }
@@ -43,6 +46,7 @@ func New(p Params) Controller {
 		log:   p.Log,
 		cache: p.Cache,
 		slack: p.Slack,
+		db:    p.DB,
 	}
 
 	exitCh := make(chan bool, 1)
@@ -67,7 +71,7 @@ func (c *con) CatFact(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	//c.log.Info(fact)
+	// c.log.Info(fact)
 
 	key := fmt.Sprintf("cat:%v", time.Now())
 	c.keys = append(c.keys, key)

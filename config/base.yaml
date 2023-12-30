@@ -22,4 +22,8 @@ slack:
 redis:
   address: "127.0.0.1:6379"
 
-dev: true
+postgres:
+  db_name: ${POSTGRES_DB:postgres}
+  user: ${POSTGRES_USER:postgres}
+  password: ${POSTGRES_PW:password}
+  ssl_mode: ${{OSTGRES_SSL:disable}}
