@@ -98,23 +98,34 @@ func (g *gateway) CreateRecord(ctx context.Context, p RecordParam) error {
 
 // UpdateRecord attempts to merge raw_events into an existing record.
 func (g *gateway) UpdateRecord(ctx context.Context, p RecordParam) error {
-	tx, err := g.db.BeginTx(ctx, g.txOpts)
-	if err != nil {
-		return fmt.Errorf("BeginTx %w", err)
-	}
-	defer tx.Rollback()
+	for {
+		tx, err := g.db.BeginTx(ctx, g.txOpts)
+		if err != nil {
+			return fmt.Errorf("BeginTx %w", err)
+		}
+		defer tx.Rollback()
 
-	_, err = g.db.ExecContext(
-		ctx,
-		mergeQuery,
-		pq.Array(p.RawEvents),
-		p.CollisionSlug,
-		p.FirstEvent,
-		p.LastEvent,
-	)
-	if err != nil {
-		return fmt.Errorf("ExecContext %w", err)
-	}
+		_, err = g.db.ExecContext(
+			ctx,
+			mergeQuery,
+			pq.Array(p.RawEvents),
+			p.CollisionSlug,
+			p.FirstEvent,
+			p.LastEvent,
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "could not serialize access") {
+				tx.Rollback()
+				continue
+			}
+			return fmt.Errorf("ExecContext %w", err)
+		}
 
-	return nil
+		err = tx.Commit()
+		if err != nil {
+			return fmt.Errorf("Commit %w", err)
+		}
+
+		return nil
+	}
 }
