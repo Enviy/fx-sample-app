@@ -1,5 +1,15 @@
 # fx-sample-app
 
+# In this sample service
+- sample fx dependency injection
+- sample life cycle hooks
+- sample redis cache implementation
+- sample config provider for use with fx
+- sample gRPC
+- sample REST proxy requests to gRPC endpoints
+- sample postgres concurrent actions
+
+# Below is a how to for generating the needed proto files.
 ## Env Vars
 Add GOPATH/bin to PATH.
 
