@@ -13,9 +13,6 @@ import (
 	"strconv"
 	"time"
 
-	"fx-sample-app/controller"
-	pb "fx-sample-app/proto/fxsample"
-
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/slack-go/slack"
 	"go.uber.org/config"
@@ -26,6 +23,9 @@ import (
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+
+	"fx-sample-app/controller"
+	pb "fx-sample-app/proto/fxsample"
 )
 
 // Handlers implements grpc service.
@@ -79,7 +79,7 @@ func New(p Params) (*Handlers, error) {
 	conn, err := grpc.DialContext(
 		context.Background(),
 		p.Cfg.Get("server.address").String(),
-		//grpc.WithBlock(),
+		// grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -117,7 +117,7 @@ func New(p Params) (*Handlers, error) {
 			}()
 
 			// Start proxy server.
-			h.log.Info("Starting http proxy", zap.String("address", "127.0.0.1:8090"))
+			h.log.Info("Starting http proxy", zap.String("address", gwServer.Addr))
 			go func() {
 				if err := gwServer.ListenAndServe(); err != nil {
 					h.log.Error("proxy listen&serve", zap.Error(err))
@@ -148,7 +148,10 @@ func (h *Handlers) Hello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloRe
 }
 
 // CatFact returns a random cat fact.
-func (h *Handlers) CatFact(ctx context.Context, req *pb.CatFactRequest) (*pb.CatFactResponse, error) {
+func (h *Handlers) CatFact(
+	ctx context.Context,
+	req *pb.CatFactRequest,
+) (*pb.CatFactResponse, error) {
 	fact, err := h.con.CatFact(ctx)
 	if err != nil {
 		return &pb.CatFactResponse{}, err
@@ -178,7 +181,7 @@ func (h *Handlers) catsAAS(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	n, err := strconv.ParseInt(timestamp, 10, 64)
 	if err != nil {
-		fmt.Printf("Err %d of type %T, %w\n", n, n, err)
+		fmt.Printf("Err %d of type %T, %v\n", n, n, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

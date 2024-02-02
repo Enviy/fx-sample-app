@@ -5,7 +5,9 @@ go 1.21
 require (
 	github.com/aws/aws-sdk-go-v2 v1.22.2
 	github.com/aws/aws-sdk-go-v2/config v1.23.0
+	github.com/google/uuid v1.3.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.2.1
 	github.com/slack-go/slack v0.12.3
